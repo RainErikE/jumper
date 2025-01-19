@@ -1,94 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mängulaud</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        table {
-            border-collapse: collapse;
-        }
-        td {
-            width: 50px;
-            height: 50px;
-            text-align: center;
-            vertical-align: middle;
-            font-size: 20px;
-            font-family: Arial, sans-serif;
-        }
-        .square{
-            width: 50px;
-            height: 50px;
-            text-align: center;
-            vertical-align: middle;
-            font-size: 20px;
-            font-family: Arial, sans-serif;
-            border: 1px solid grey;
-            background-color: grey;
-        }
-    </style>
-</head>
-<body>
-    <table>
-        <tr>
-            <td class="square">18</td>
-            <td></td>
-            <td class="square">20</td>
-            <td></td>
-            <td class="square">22</td>
-            <td></td>
-            <td class="square">24</td>
-        </tr>
-        <tr>
-            <td></td>
-            <td>13</td>
-            <td></td>
-            <td>15</td>
-            <td></td>
-            <td>17</td>
-        </tr>
-        <tr>
-            <td class="square">10</td>
-            <td></td>
-            <td class="square">12</td>
-            <td></td>
-            <td class="square">14</td>
-            <td></td>
-            <td class="square">16</td>
-        </tr>
-        <tr>
-            <td></td>
-            <td>7</td>
-            <td></td>
-            <td>9</td>
-            <td></td>
-            <td>11</td>
-        </tr>
-        <tr>
-            <td class="square">2</td>
-            <td></td>
-            <td class="square">4</td>
-            <td></td>
-            <td class="square">6</td>
-            <td></td>
-            <td class="square">8</td>
-        </tr>
-        <tr>
-            <td></td>
-            <td>1</td>
-            <td></td>
-            <td>3</td>
-            <td></td>
-            <td>5</td>
-        </tr>
-    </table>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Mängulaud</title>
+		<style>
+			body {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				height: 100vh;
+				margin: 0;
+			}
+			table {
+				border-collapse: collapse;
+			}
+			td {
+				width: 80px;
+				height: 80px;
+				text-align: center;
+				vertical-align: middle;
+				font-size: 20px;
+				font-family: Arial, sans-serif;
+				cursor: pointer;
+			}
+			.square {
+				border: 1px solid grey;
+			}
+			.bsquare {
+				border: 1px solid rgb(0, 0, 0);
+				background-color: grey;
+			}
+			.selected {
+				background-color: yellow !important;
+			}
+			#position-display {
+				margin-top: 20px;
+				font-size: 18px;
+				font-family: Arial, sans-serif;
+			}
+			#position-display.hidden {
+				display: none;
+			}
+			.finishline {
+				font-size: 40px;
+				border: 1px solid;
+			}
+			.startline {
+				font-size: 40px;
+				border: 1px solid;
+			}
+		</style>
+	</head>
+	<body>
+		<table>
+			<tr>
+				<td colspan="7" id="finish" class="finishline">FINISH</td>
+			</tr>
+			<tr>
+				<td class="square">18</td>
+				<td></td>
+				<td class="square">20</td>
+				<td></td>
+				<td class="square">22</td>
+				<td></td>
+				<td class="square">24</td>
+			</tr>
+			<tr>
+				<td></td>
+				<td class="bsquare">13</td>
+				<td></td>
+				<td class="bsquare">15</td>
+				<td></td>
+				<td class="bsquare">17</td>
+			</tr>
+			<tr>
+				<td class="square">10</td>
+				<td></td>
+				<td class="square">12</td>
+				<td></td>
+				<td class="square">14</td>
+				<td></td>
+				<td class="square">16</td>
+			</tr>
+			<tr>
+				<td></td>
+				<td class="bsquare">7</td>
+				<td></td>
+				<td class="bsquare">9</td>
+				<td></td>
+				<td class="bsquare">11</td>
+			</tr>
+			<tr>
+				<td class="square">2</td>
+				<td></td>
+				<td class="square">4</td>
+				<td></td>
+				<td class="square">6</td>
+				<td></td>
+				<td class="square">8</td>
+			</tr>
+			<tr>
+				<td></td>
+				<td class="bsquare">1</td>
+				<td></td>
+				<td class="bsquare">3</td>
+				<td></td>
+				<td class="bsquare">5</td>
+			</tr>
+			<tr>
+				<td colspan="7" id="start" class="startline selected">START</td>
+			</tr>
+		</table>
+		<div id="position-display">Alustamiseks liigu ruutudele 2, 4, 6 või 8.</div>
+		<script>
+			const squares = document.querySelectorAll("td");
+			const positionDisplay = document.getElementById("position-display");
+			let currentSquare = document.getElementById("start"); // START square initialized as selected
 
-</body>
+			squares.forEach((square) => {
+				square.addEventListener("click", () => {
+					const currentValue = getSquareValue(currentSquare);
+					const targetValue = getSquareValue(square);
+					const isEven = targetValue && targetValue % 2 === 0;
+					const canMove = isAdjacent(currentValue, targetValue);
+
+					if ((isEven && canMove) || isSpecialMove(currentValue, targetValue)) {
+						squares.forEach((sq) => sq.classList.remove("selected"));
+
+						square.classList.add("selected");
+						currentSquare = square;
+
+						positionDisplay.classList.add("hidden");
+					} else if (!isEven && !isSpecialMove(currentValue, targetValue)) {
+						positionDisplay.classList.remove("hidden");
+						positionDisplay.textContent = "Pead liikuma paarisarvuga ruutudel!";
+					} else {
+						positionDisplay.classList.remove("hidden");
+						positionDisplay.textContent = "Pead liikuma kõrval olevale ruudule!";
+					}
+				});
+			});
+
+			/**
+			 * Extract the numeric value of a square, or return null if the square has no number.
+			 */
+			function getSquareValue(square) {
+				const value = square.textContent.trim();
+				return value === "START" || value === "FINISH" ? value : parseInt(value) || null;
+			}
+
+			/**
+			 * Determine if two squares are adjacent based on their numeric values.
+			 */
+			function isAdjacent(value1, value2) {
+				if (typeof value1 === "number" && typeof value2 === "number") {
+					// Define adjacency logic for numeric squares
+					return Math.abs(value1 - value2) === 2 || Math.abs(value1 - value2) === 8;
+				}
+				return false; // Not numeric, not adjacent
+			}
+
+			/**
+			 * Determine if the move is a special case (START, FINISH, or predefined rules).
+			 */
+			function isSpecialMove(currentValue, targetValue) {
+				// Allow moving to START from squares 2, 4, 6, 8
+				if (targetValue === "START" && ["2", "4", "6", "8"].includes(currentValue?.toString())) {
+					return true;
+				}
+
+				// Allow moving back to 2, 4, 6, 8 from START
+				if (["2", "4", "6", "8"].includes(targetValue?.toString()) && currentValue === "START") {
+					return true;
+				}
+
+				// Allow moving to FINISH from squares 18, 20, 22, 24
+				if (targetValue === "FINISH" && ["18", "20", "22", "24"].includes(currentValue?.toString())) {
+					return true;
+				}
+
+				// Allow moving back to 18, 20, 22, 24 from START
+				if (["18", "20", "22", "24"].includes(targetValue?.toString()) && currentValue === "FINISH") {
+					return true;
+				}
+
+				return false;
+			}
+		</script>
+	</body>
 </html>
