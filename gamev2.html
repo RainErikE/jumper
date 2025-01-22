@@ -360,6 +360,9 @@
 				const targetX = parseInt(target.dataset.x, 10);
 				const targetY = parseInt(target.dataset.y, 10);
 
+				if ((currY === maxY && targetY === 0) || (currY === 0 && targetY === maxY)) {
+					return false;
+				}
 				if (currY === 0 && (targetY === 1 || targetY === 2)) {
 					return true;
 				} else if ((currY === 1 || currY === 2) && targetY === 0) {
