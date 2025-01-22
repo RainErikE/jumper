@@ -45,9 +45,6 @@
 				font-size: 18px;
 				font-family: Arial, sans-serif;
 			}
-			#position-display.hidden {
-				display: none;
-			}
 			.finishline {
 				font-size: 40px;
 				border: 1px solid;
@@ -63,10 +60,8 @@
 	</head>
 	<body>
 		<div id="game-container"></div>
-		<div id="position-display">Alustamiseks liigu esimese või teise rea ruudule, mis järgneb START reale.</div>
+		<div id="position-display"></div>
 		<script>
-			let maxY;
-
 			const squares = document.querySelectorAll("td");
 			const positionDisplay = document.getElementById("position-display");
 
@@ -144,25 +139,190 @@
 				table.appendChild(finishRow);
 
 				gameContainer.appendChild(table);
+
+				positionDisplay.innerHTML = `
+        <div>Score: ${score.toFixed(0)} | Multiplier: ${scoreMultiplier.toFixed(2)}x</div>
+        Alustamiseks liigu esimese või teise rea ruudule, mis järgneb START reale.
+    `;
+			}
+
+			let aiPosition = null;
+			let aiInitialized = false;
+			let maxY;
+			let score = 0; // Track the player's score
+			let scoreMultiplier = 1.0; // Start multiplier at 1.0x
+			let hasFinished = false;
+
+			function highlightAISquare(playerSquare) {
+				const playerX = parseInt(playerSquare.dataset.x, 10);
+				const playerY = parseInt(playerSquare.dataset.y, 10);
+
+				if (!aiInitialized) {
+					let targetX = playerX;
+					let targetY = playerY + 2;
+
+					if (playerY + 2 >= maxY) {
+						targetY = playerY - 2;
+					}
+
+					console.log("Target AI Position:", { targetX, targetY });
+
+					const targetSquare = document.querySelector(`td[data-x="${targetX}"][data-y="${targetY}"]`);
+					if (targetSquare && !targetSquare.classList.contains("empty")) {
+						targetSquare.classList.add("ai");
+						aiPosition = { x: targetX, y: targetY };
+						aiInitialized = true;
+						console.log("AI placed at:", aiPosition);
+					} else {
+						console.log("Target square is invalid or empty");
+					}
+				} else if (aiPosition) {
+					moveAI(playerSquare); // Handle subsequent AI movements
+				}
+			}
+
+			function moveAI(playerSquare) {
+				const playerX = parseInt(playerSquare.dataset.x, 10);
+				const playerY = parseInt(playerSquare.dataset.y, 10);
+
+				const aiX = aiPosition.x;
+				const aiY = aiPosition.y;
+
+				const targetRow = playerY < maxY / 2 ? maxY : 0;
+
+				const diagonalMoves = [
+					{ x: aiX - 1, y: aiY - 1 },
+					{ x: aiX + 1, y: aiY - 1 },
+					{ x: aiX - 1, y: aiY + 1 },
+					{ x: aiX + 1, y: aiY + 1 },
+				];
+
+				const scoredMoves = diagonalMoves.map((move) => {
+					const distanceToPlayer = Math.abs(move.x - playerX) + Math.abs(move.y - playerY);
+					const distanceToTargetRow = Math.abs(move.y - targetRow);
+					return {
+						...move,
+						score: distanceToPlayer + distanceToTargetRow * 0.5,
+					};
+				});
+
+				scoredMoves.sort((a, b) => a.score - b.score);
+				const bestMove = scoredMoves[0];
+
+				const aiSquare = document.querySelector(`td[data-x="${bestMove.x}"][data-y="${bestMove.y}"]`);
+				if (aiSquare) {
+					const oldAISquare = document.querySelector(`td[data-x="${aiX}"][data-y="${aiY}"]`);
+					if (oldAISquare) {
+						oldAISquare.classList.remove("ai");
+					}
+
+					aiSquare.classList.add("ai");
+					aiPosition = { x: bestMove.x, y: bestMove.y };
+					if (bestMove.x === playerX && bestMove.y === playerY) {
+						resetGame(aiSquare); // Reset the game if the AI catches the player
+					}
+					console.log("AI moved to:", aiPosition);
+				} else {
+					console.log("No valid move found for AI.");
+				}
+			}
+
+			function resetGame(catchSquare) {
+				// Reset AI and player state
+				aiInitialized = false;
+				aiPosition = null;
+
+				score = 0; // Reset score
+				scoreMultiplier = 1.0;
+
+				// Remove the .ai class from the square where the player was caught
+				if (catchSquare) {
+					catchSquare.classList.remove("ai");
+				}
+
+				// Reset player to start square
+				const currentPlayerSquare = document.querySelector(".selected");
+				const startSquare = document.querySelector(`td[data-x="0"][data-y="0"]`);
+
+				if (currentPlayerSquare) {
+					currentPlayerSquare.classList.remove("selected");
+				}
+				if (startSquare) {
+					startSquare.classList.add("selected");
+					updatePositionDisplay(startSquare);
+				}
+
+				// Reset position display text
+				positionDisplay.innerHTML = `
+        <div>Score: ${score.toFixed(0)} | Multiplier: ${scoreMultiplier.toFixed(2)}x</div>
+        Alustamiseks liigu esimese või teise rea ruudule, mis järgneb START reale.
+    `;
 			}
 
 			function handleCellClick(event) {
 				const currentSquare = document.querySelector(".selected");
 				const newSquare = event.target;
 
-				if (newSquare.classList.contains("startline")) {
+				if (newSquare.classList.contains("startline") || newSquare.classList.contains("finishline")) {
 					if (currentSquare) {
 						currentSquare.classList.remove("selected");
 					}
 					newSquare.classList.add("selected");
 					updatePositionDisplay(newSquare);
+
+					if (newSquare.classList.contains("finishline") && !hasFinished) {
+						hasFinished = true;
+						// Give points the first time crossing finish
+						score += 10 * scoreMultiplier;
+						scoreMultiplier += 0.2; // Increase multiplier
+						positionDisplay.innerHTML = `
+                <div>Score: ${score.toFixed(0)} | Multiplier: ${scoreMultiplier.toFixed(2)}x</div>
+            `;
+					} else if (newSquare.classList.contains("startline") && hasFinished) {
+						// If player returns to start after finishing, score points
+						score += 10 * scoreMultiplier;
+						scoreMultiplier += 0.2; // Increase multiplier
+						positionDisplay.innerHTML = `
+                <div>Score: ${score.toFixed(0)} | Multiplier: ${scoreMultiplier.toFixed(2)}x</div>
+            `;
+						hasFinished = false; // Reset after scoring
+					}
+
+					if (aiPosition) {
+						const oldAISquare = document.querySelector(`td[data-x="${aiPosition.x}"][data-y="${aiPosition.y}"]`);
+						if (oldAISquare) {
+							oldAISquare.classList.remove("ai");
+						}
+					}
+
+					aiInitialized = false;
+					aiPosition = null;
+
+					highlightAISquare(newSquare);
 				} else {
+					// Validate if the move is allowed
 					if (isValidMove(currentSquare, newSquare)) {
 						if (currentSquare) {
 							currentSquare.classList.remove("selected");
 						}
 						newSquare.classList.add("selected");
 						updatePositionDisplay(newSquare);
+
+						// Check for collision before moving the AI
+						if (aiPosition) {
+							const aiSquare = document.querySelector(`td[data-x="${aiPosition.x}"][data-y="${aiPosition.y}"]`);
+							if (aiSquare && aiSquare === newSquare) {
+								resetGame(aiSquare); // Player is caught, reset the game
+								return;
+							}
+						}
+
+						// Move AI if it has been initialized
+						if (aiPosition) {
+							moveAI(newSquare); // Allow AI to move after the player
+						} else {
+							highlightAISquare(newSquare); // Initialize AI if not already done
+						}
 					} else {
 						alert("Sa saad liikuda ainult paremale, vasakule, üles või alla.");
 					}
@@ -177,19 +337,15 @@
 
 				if (currY === 0 && (targetY === 1 || targetY === 2)) {
 					return true;
-				}
-				else if ((currY === 1 || currY === 2) && targetY === 0) {
+				} else if ((currY === 1 || currY === 2) && targetY === 0) {
 					return true;
-				}
-				else if ((currY === maxY - 1 || currY === maxY - 2) && targetY === maxY) {
+				} else if ((currY === maxY - 1 || currY === maxY - 2) && targetY === maxY) {
 					return true;
 				} else if (currY === maxY && (targetY === maxY - 1 || targetY === maxY - 2)) {
 					return true;
-				}
-				else if ((currX === targetX && Math.abs(currY - targetY) === 2) || (currY === targetY && Math.abs(currX - targetX) === 2)) {
+				} else if ((currX === targetX && Math.abs(currY - targetY) === 2) || (currY === targetY && Math.abs(currX - targetX) === 2)) {
 					return true;
-				}
-				else {
+				} else {
 					return false;
 				}
 			}
@@ -199,7 +355,8 @@
 				const y = square.dataset.y;
 				const value = square.textContent;
 
-				positionDisplay.textContent = `Asukoht: (${x}, ${y}) ruut ${value}`;
+				// Display current position and score/multiplier
+				positionDisplay.textContent = `Asukoht: (${x}; ${y}) ruut ${value} | Score: ${score.toFixed(0)} | Multiplier: ${scoreMultiplier.toFixed(2)}x`;
 			}
 
 			generateGrid(6, 7);
