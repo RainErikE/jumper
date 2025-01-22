@@ -188,42 +188,85 @@
 				const aiX = aiPosition.x;
 				const aiY = aiPosition.y;
 
-				const targetRow = playerY < maxY / 2 ? maxY : 0;
+				// Helper function to find valid neighbors (cells that AI can move to)
+				function getValidNeighbors(x, y) {
+					const neighbors = [];
+					const directions = [
+						{ dx: 1, dy: 1 }, // down-right
+						{ dx: -1, dy: 1 }, // down-left
+						{ dx: 1, dy: -1 }, // up-right
+						{ dx: -1, dy: -1 }, // up-left
+					];
 
-				const diagonalMoves = [
-					{ x: aiX - 1, y: aiY - 1 },
-					{ x: aiX + 1, y: aiY - 1 },
-					{ x: aiX - 1, y: aiY + 1 },
-					{ x: aiX + 1, y: aiY + 1 },
-				];
+					for (const { dx, dy } of directions) {
+						const newX = x + dx;
+						const newY = y + dy;
 
-				const scoredMoves = diagonalMoves.map((move) => {
-					const distanceToPlayer = Math.abs(move.x - playerX) + Math.abs(move.y - playerY);
-					const distanceToTargetRow = Math.abs(move.y - targetRow);
-					return {
-						...move,
-						score: distanceToPlayer + distanceToTargetRow * 0.5,
-					};
-				});
-
-				scoredMoves.sort((a, b) => a.score - b.score);
-				const bestMove = scoredMoves[0];
-
-				const aiSquare = document.querySelector(`td[data-x="${bestMove.x}"][data-y="${bestMove.y}"]`);
-				if (aiSquare) {
-					const oldAISquare = document.querySelector(`td[data-x="${aiX}"][data-y="${aiY}"]`);
-					if (oldAISquare) {
-						oldAISquare.classList.remove("ai");
+						// Check if the new position is within bounds and not an empty square
+						const neighborSquare = document.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
+						if (neighborSquare && !neighborSquare.classList.contains("empty")) {
+							neighbors.push({ x: newX, y: newY });
+						}
 					}
 
-					aiSquare.classList.add("ai");
-					aiPosition = { x: bestMove.x, y: bestMove.y };
-					if (bestMove.x === playerX && bestMove.y === playerY) {
-						resetGame(aiSquare); // Reset the game if the AI catches the player
+					return neighbors;
+				}
+
+				// BFS function to find the shortest path
+				function bfs(startX, startY, targetX, targetY) {
+					const queue = [{ x: startX, y: startY, path: [] }];
+					const visited = new Set();
+					visited.add(`${startX},${startY}`);
+
+					while (queue.length > 0) {
+						const { x, y, path } = queue.shift();
+
+						// If we've reached the target, return the path
+						if (x === targetX && y === targetY) {
+							return path;
+						}
+
+						const neighbors = getValidNeighbors(x, y);
+						for (const { x: nx, y: ny } of neighbors) {
+							const pos = `${nx},${ny}`;
+							if (!visited.has(pos)) {
+								visited.add(pos);
+								queue.push({ x: nx, y: ny, path: [...path, { x: nx, y: ny }] });
+							}
+						}
 					}
-					console.log("AI moved to:", aiPosition);
+
+					return []; // No path found
+				}
+
+				// Get the shortest path from AI to the player
+				const pathToPlayer = bfs(aiX, aiY, playerX, playerY);
+
+				// If there's a valid path, move AI along that path
+				if (pathToPlayer.length > 0) {
+					const nextMove = pathToPlayer[0]; // The first move in the path is the best move
+					const aiSquare = document.querySelector(`td[data-x="${nextMove.x}"][data-y="${nextMove.y}"]`);
+
+					if (aiSquare) {
+						// Remove AI from its old position
+						const oldAISquare = document.querySelector(`td[data-x="${aiX}"][data-y="${aiY}"]`);
+						if (oldAISquare) {
+							oldAISquare.classList.remove("ai");
+						}
+
+						// Place AI at the new position
+						aiSquare.classList.add("ai");
+						aiPosition = { x: nextMove.x, y: nextMove.y };
+
+						// Check if the AI catches the player
+						if (nextMove.x === playerX && nextMove.y === playerY) {
+							resetGame(aiSquare); // Reset the game if the AI catches the player
+						}
+
+						console.log("AI moved to:", aiPosition);
+					}
 				} else {
-					console.log("No valid move found for AI.");
+					console.log("No valid path found for AI.");
 				}
 			}
 
