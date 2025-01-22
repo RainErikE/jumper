@@ -149,8 +149,8 @@
 			let aiPosition = null;
 			let aiInitialized = false;
 			let maxY;
-			let score = 0; // Track the player's score
-			let scoreMultiplier = 1.0; // Start multiplier at 1.0x
+			let score = 0;
+			let scoreMultiplier = 1.0;
 			let hasFinished = false;
 
 			function highlightAISquare(playerSquare) {
@@ -177,7 +177,7 @@
 						console.log("Target square is invalid or empty");
 					}
 				} else if (aiPosition) {
-					moveAI(playerSquare); // Handle subsequent AI movements
+					moveAI(playerSquare);
 				}
 			}
 
@@ -188,21 +188,19 @@
 				const aiX = aiPosition.x;
 				const aiY = aiPosition.y;
 
-				// Helper function to find valid neighbors (cells that AI can move to)
 				function getValidNeighbors(x, y) {
 					const neighbors = [];
 					const directions = [
-						{ dx: 1, dy: 1 }, // down-right
-						{ dx: -1, dy: 1 }, // down-left
-						{ dx: 1, dy: -1 }, // up-right
-						{ dx: -1, dy: -1 }, // up-left
+						{ dx: 1, dy: 1 },
+						{ dx: -1, dy: 1 },
+						{ dx: 1, dy: -1 },
+						{ dx: -1, dy: -1 },
 					];
 
 					for (const { dx, dy } of directions) {
 						const newX = x + dx;
 						const newY = y + dy;
 
-						// Check if the new position is within bounds and not an empty square
 						const neighborSquare = document.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
 						if (neighborSquare && !neighborSquare.classList.contains("empty")) {
 							neighbors.push({ x: newX, y: newY });
@@ -212,7 +210,6 @@
 					return neighbors;
 				}
 
-				// BFS function to find the shortest path
 				function bfs(startX, startY, targetX, targetY) {
 					const queue = [{ x: startX, y: startY, path: [] }];
 					const visited = new Set();
@@ -221,7 +218,6 @@
 					while (queue.length > 0) {
 						const { x, y, path } = queue.shift();
 
-						// If we've reached the target, return the path
 						if (x === targetX && y === targetY) {
 							return path;
 						}
@@ -236,31 +232,26 @@
 						}
 					}
 
-					return []; // No path found
+					return [];
 				}
 
-				// Get the shortest path from AI to the player
 				const pathToPlayer = bfs(aiX, aiY, playerX, playerY);
 
-				// If there's a valid path, move AI along that path
 				if (pathToPlayer.length > 0) {
-					const nextMove = pathToPlayer[0]; // The first move in the path is the best move
+					const nextMove = pathToPlayer[0];
 					const aiSquare = document.querySelector(`td[data-x="${nextMove.x}"][data-y="${nextMove.y}"]`);
 
 					if (aiSquare) {
-						// Remove AI from its old position
 						const oldAISquare = document.querySelector(`td[data-x="${aiX}"][data-y="${aiY}"]`);
 						if (oldAISquare) {
 							oldAISquare.classList.remove("ai");
 						}
 
-						// Place AI at the new position
 						aiSquare.classList.add("ai");
 						aiPosition = { x: nextMove.x, y: nextMove.y };
 
-						// Check if the AI catches the player
 						if (nextMove.x === playerX && nextMove.y === playerY) {
-							resetGame(aiSquare); // Reset the game if the AI catches the player
+							resetGame(aiSquare);
 						}
 
 						console.log("AI moved to:", aiPosition);
@@ -271,19 +262,16 @@
 			}
 
 			function resetGame(catchSquare) {
-				// Reset AI and player state
 				aiInitialized = false;
 				aiPosition = null;
 
-				score = 0; // Reset score
+				score = 0;
 				scoreMultiplier = 1.0;
 
-				// Remove the .ai class from the square where the player was caught
 				if (catchSquare) {
 					catchSquare.classList.remove("ai");
 				}
 
-				// Reset player to start square
 				const currentPlayerSquare = document.querySelector(".selected");
 				const startSquare = document.querySelector(`td[data-x="0"][data-y="0"]`);
 
@@ -295,7 +283,6 @@
 					updatePositionDisplay(startSquare);
 				}
 
-				// Reset position display text
 				positionDisplay.innerHTML = `
         <div>Score: ${score.toFixed(0)} | Multiplier: ${scoreMultiplier.toFixed(2)}x</div>
         Alustamiseks liigu esimese või teise rea ruudule, mis järgneb START reale.
@@ -315,20 +302,18 @@
 
 					if (newSquare.classList.contains("finishline") && !hasFinished) {
 						hasFinished = true;
-						// Give points the first time crossing finish
 						score += 10 * scoreMultiplier;
-						scoreMultiplier += 0.2; // Increase multiplier
+						scoreMultiplier += 0.2;
 						positionDisplay.innerHTML = `
                 <div>Score: ${score.toFixed(0)} | Multiplier: ${scoreMultiplier.toFixed(2)}x</div>
             `;
 					} else if (newSquare.classList.contains("startline") && hasFinished) {
-						// If player returns to start after finishing, score points
 						score += 10 * scoreMultiplier;
-						scoreMultiplier += 0.2; // Increase multiplier
+						scoreMultiplier += 0.2;
 						positionDisplay.innerHTML = `
                 <div>Score: ${score.toFixed(0)} | Multiplier: ${scoreMultiplier.toFixed(2)}x</div>
             `;
-						hasFinished = false; // Reset after scoring
+						hasFinished = false;
 					}
 
 					if (aiPosition) {
@@ -343,7 +328,6 @@
 
 					highlightAISquare(newSquare);
 				} else {
-					// Validate if the move is allowed
 					if (isValidMove(currentSquare, newSquare)) {
 						if (currentSquare) {
 							currentSquare.classList.remove("selected");
@@ -351,20 +335,18 @@
 						newSquare.classList.add("selected");
 						updatePositionDisplay(newSquare);
 
-						// Check for collision before moving the AI
 						if (aiPosition) {
 							const aiSquare = document.querySelector(`td[data-x="${aiPosition.x}"][data-y="${aiPosition.y}"]`);
 							if (aiSquare && aiSquare === newSquare) {
-								resetGame(aiSquare); // Player is caught, reset the game
+								resetGame(aiSquare);
 								return;
 							}
 						}
 
-						// Move AI if it has been initialized
 						if (aiPosition) {
-							moveAI(newSquare); // Allow AI to move after the player
+							moveAI(newSquare);
 						} else {
-							highlightAISquare(newSquare); // Initialize AI if not already done
+							highlightAISquare(newSquare);
 						}
 					} else {
 						alert("Sa saad liikuda ainult paremale, vasakule, üles või alla.");
@@ -398,7 +380,6 @@
 				const y = square.dataset.y;
 				const value = square.textContent;
 
-				// Display current position and score/multiplier
 				positionDisplay.textContent = `Asukoht: (${x}; ${y}) ruut ${value} | Score: ${score.toFixed(0)} | Multiplier: ${scoreMultiplier.toFixed(2)}x`;
 			}
 
